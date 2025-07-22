@@ -1,121 +1,163 @@
-from kivy.app import App
-from kivy.uix.widget import Widget
-from kivy.graphics import Color, Line, Rectangle, Ellipse
-from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.button import Button
-from kivy.uix.slider import Slider
-from kivy.uix.togglebutton import ToggleButton
-from kivy.uix.boxlayout import BoxLayout
 import random
 
-class MyPaintWidget(Widget):
-    def __init__(self, **kwargs):
-        super(MyPaintWidget, self).__init__(**kwargs)
-        self.line_width = 2  # Espessura padrão da linha
-        self.current_shape = 'line'  # Forma padrão
-        self.start_pos = None  # Para armazenar posição inicial de formas
-        self.current_shape_obj = None  # Para armazenar a forma atual sendo desenhada
+def criar_tabuleiro():
+    """Cria um tabuleiro vazio do jogo da velha"""
+    return [" " for _ in range(9)]
 
-    def on_touch_down(self, touch):
-        # Gerar cor aleatória para cada novo traço
-        r = random.random()
-        g = random.random()
-        b = random.random()
+def mostrar_tabuleiro(tabuleiro):
+    """Exibe o tabuleiro na tela"""
+    print("\n")
+    print(f" {tabuleiro[0]} | {tabuleiro[1]} | {tabuleiro[2]} ")
+    print("-----------")
+    print(f" {tabuleiro[3]} | {tabuleiro[4]} | {tabuleiro[5]} ")
+    print("-----------")
+    print(f" {tabuleiro[6]} | {tabuleiro[7]} | {tabuleiro[8]} ")
+    print("\n")
+
+def jogada_valida(tabuleiro, posicao):
+    """Verifica se uma jogada é válida"""
+    return tabuleiro[posicao] == " "
+
+def fazer_jogada(tabuleiro, posicao, jogador):
+    """Realiza uma jogada no tabuleiro"""
+    if jogada_valida(tabuleiro, posicao):
+        tabuleiro[posicao] = jogador
+        return True
+    return False
+
+def verificar_vencedor(tabuleiro):
+    """Verifica se há um vencedor ou empate"""
+    # Linhas
+    for i in range(0, 9, 3):
+        if tabuleiro[i] == tabuleiro[i+1] == tabuleiro[i+2] != " ":
+            return tabuleiro[i]
+    
+    # Colunas
+    for i in range(3):
+        if tabuleiro[i] == tabuleiro[i+3] == tabuleiro[i+6] != " ":
+            return tabuleiro[i]
+    
+    # Diagonais
+    if tabuleiro[0] == tabuleiro[4] == tabuleiro[8] != " ":
+        return tabuleiro[0]
+    if tabuleiro[2] == tabuleiro[4] == tabuleiro[6] != " ":
+        return tabuleiro[2]
+    
+    # Empate
+    if " " not in tabuleiro:
+        return "empate"
+    
+    return None
+
+def jogada_ia(tabuleiro, jogador_ia):
+    """IA faz sua jogada usando o algoritmo Minimax"""
+    jogador_humano = "O" if jogador_ia == "X" else "X"
+    
+    def minimax(tabuleiro, profundidade, eh_maximizando):
+        resultado = verificar_vencedor(tabuleiro)
         
-        with self.canvas:
-            Color(r, g, b)
+        if resultado == jogador_ia:
+            return 1
+        elif resultado == jogador_humano:
+            return -1
+        elif resultado == "empate":
+            return 0
             
-            if self.current_shape == 'line':
-                # Para linhas, começamos uma nova linha
-                touch.ud['line'] = Line(points=(touch.x, touch.y), width=self.line_width)
-            elif self.current_shape == 'rectangle':
-                # Para retângulos, armazenamos a posição inicial
-                self.start_pos = (touch.x, touch.y)
-                self.current_shape_obj = Rectangle(pos=self.start_pos, size=(1, 1))
-            elif self.current_shape == 'ellipse':
-                # Para elipses, similar aos retângulos
-                self.start_pos = (touch.x, touch.y)
-                self.current_shape_obj = Ellipse(pos=self.start_pos, size=(1, 1))
-
-    def on_touch_move(self, touch):
-        if self.current_shape == 'line':
-            # Para linhas, apenas adicionamos pontos
-            touch.ud['line'].points += [touch.x, touch.y]
-        elif self.current_shape in ['rectangle', 'ellipse'] and self.start_pos:
-            # Para retângulos e elipses, calculamos tamanho e posição
-            start_x, start_y = self.start_pos
-            width = touch.x - start_x
-            height = touch.y - start_y
+        if eh_maximizando:
+            melhor_pontuacao = -float("inf")
+            for i in range(9):
+                if tabuleiro[i] == " ":
+                    tabuleiro[i] = jogador_ia
+                    pontuacao = minimax(tabuleiro, profundidade + 1, False)
+                    tabuleiro[i] = " "
+                    melhor_pontuacao = max(pontuacao, melhor_pontuacao)
+            return melhor_pontuacao
+        else:
+            melhor_pontuacao = float("inf")
+            for i in range(9):
+                if tabuleiro[i] == " ":
+                    tabuleiro[i] = jogador_humano
+                    pontuacao = minimax(tabuleiro, profundidade + 1, True)
+                    tabuleiro[i] = " "
+                    melhor_pontuacao = min(pontuacao, melhor_pontuacao)
+            return melhor_pontuacao
+    
+    melhor_pontuacao = -float("inf")
+    melhor_jogada = None
+    
+    for i in range(9):
+        if tabuleiro[i] == " ":
+            tabuleiro[i] = jogador_ia
+            pontuacao = minimax(tabuleiro, 0, False)
+            tabuleiro[i] = " "
             
-            # Ajustamos posição e tamanho conforme o movimento
-            if width < 0:
-                new_x = touch.x
-                width = abs(width)
-            else:
-                new_x = start_x
+            if pontuacao > melhor_pontuacao:
+                melhor_pontuacao = pontuacao
+                melhor_jogada = i
+    
+    fazer_jogada(tabuleiro, melhor_jogada, jogador_ia)
+    return melhor_jogada
+
+def jogar():
+    """Função principal do jogo"""
+    print("Bem-vindo ao Jogo da Velha contra a IA!")
+    print("Posições do tabuleiro:")
+    print(" 0 | 1 | 2 ")
+    print("-----------")
+    print(" 3 | 4 | 5 ")
+    print("-----------")
+    print(" 6 | 7 | 8 ")
+    print("\n")
+    
+    # Escolher quem começa
+    primeiro = input("Você quer jogar primeiro? (s/n): ").lower()
+    jogador_humano = "X" if primeiro == "s" else "O"
+    jogador_ia = "O" if jogador_humano == "X" else "X"
+    
+    tabuleiro = criar_tabuleiro()
+    
+    if jogador_humano == "X":
+        mostrar_tabuleiro(tabuleiro)
+    
+    while True:
+        # Jogada do humano
+        if jogador_humano == "X" or " " in tabuleiro:
+            try:
+                posicao = int(input("Escolha uma posição (0-8): "))
+                if posicao < 0 or posicao > 8:
+                    print("Posição inválida! Escolha entre 0 e 8.")
+                    continue
                 
-            if height < 0:
-                new_y = touch.y
-                height = abs(height)
-            else:
-                new_y = start_y
-                
-            self.current_shape_obj.pos = (new_x, new_y)
-            self.current_shape_obj.size = (width, height)
-
-    def clear_canvas(self, instance):
-        self.canvas.clear()
-        
-    def set_line_width(self, instance, value):
-        self.line_width = value
-        
-    def set_shape(self, shape):
-        self.current_shape = shape
-
-class MyPaintApp(App):
-    def build(self):
-        # Layout principal
-        layout = FloatLayout()
-        
-        # Widget de pintura (ocupa toda a tela)
-        self.paint_widget = MyPaintWidget()
-        layout.add_widget(self.paint_widget)
-        
-        # Layout para controles (parte superior)
-        controls_layout = BoxLayout(size_hint=(1, None), height=50, pos_hint={'top': 1})
-        
-        # Botão para limpar
-        clear_btn = Button(text='Limpar', size_hint=(None, None), size=(100, 50))
-        clear_btn.bind(on_release=self.paint_widget.clear_canvas)
-        
-        # Slider para espessura da linha
-        slider = Slider(min=1, max=20, value=2, size_hint=(0.3, None), height=50)
-        slider.bind(value=self.paint_widget.set_line_width)
-        
-        # Botões de seleção de forma
-        line_btn = ToggleButton(text='Linha', group='shape', state='down')
-        rect_btn = ToggleButton(text='Retângulo', group='shape')
-        ellipse_btn = ToggleButton(text='Elipse', group='shape')
-        
-        line_btn.bind(on_press=lambda x: self.paint_widget.set_shape('line'))
-        rect_btn.bind(on_press=lambda x: self.paint_widget.set_shape('rectangle'))
-        ellipse_btn.bind(on_press=lambda x: self.paint_widget.set_shape('ellipse'))
-        
-        # Adicionando controles ao layout
-        controls_layout.add_widget(clear_btn)
-        controls_layout.add_widget(slider)
-        controls_layout.add_widget(line_btn)
-        controls_layout.add_widget(rect_btn)
-        controls_layout.add_widget(ellipse_btn)
-        
-        # Adicionando layout de controles ao layout principal
-        layout.add_widget(controls_layout)
-        
-        return layout
-
-if __name__ == '__main__':
-    MyPaintApp().run()
+                if not fazer_jogada(tabuleiro, posicao, jogador_humano):
+                    print("Posição já ocupada! Escolha outra.")
+                    continue
+            except ValueError:
+                print("Entrada inválida! Digite um número entre 0 e 8.")
+                continue
             
-         
-                
-                
+            mostrar_tabuleiro(tabuleiro)
+            
+            vencedor = verificar_vencedor(tabuleiro)
+            if vencedor:
+                if vencedor == jogador_humano:
+                    print("Parabéns! Você venceu!")
+                else:
+                    print("Empate!")
+                break
+        
+        # Jogada da IA
+        if jogador_ia == "X" or " " in tabuleiro:
+            print("IA está pensando...")
+            jogada_ia(tabuleiro, jogador_ia)
+            mostrar_tabuleiro(tabuleiro)
+            
+            vencedor = verificar_vencedor(tabuleiro)
+            if vencedor:
+                if vencedor == jogador_ia:
+                    print("A IA venceu! Tente novamente.")
+                else:
+                    print("Empate!")
+                break
+
+if __name__ == "__main__":
+    jogar()
