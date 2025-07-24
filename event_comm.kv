@@ -1,0 +1,23 @@
+<StatusDisplayWidget>:
+    orientation: 'vertical'
+    Label:
+        text: "Status Atual:"
+        font_size: 18
+    Label:
+        text: root.global_state_obj.current_status
+        font_size: 28
+        bold: True
+        color: 0.1, 0.6, 0.2, 1
+
+<StatusChangerWidget>:
+    orientation: 'horizontal'
+    spacing: 10
+
+    TextInput:
+        id: status_input
+        hint_text: "Digite novo status"
+        multiline: False
+
+    Button:
+        text: "Atualizar"
+        on_press: root.update_status(status_input.text)
