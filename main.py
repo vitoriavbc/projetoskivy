@@ -1,99 +1,93 @@
+
+import json
+import threading
+from datetime import datetime
 from kivy.app import App
-from kivy.uix.widget import Widget
-from kivy.properties import NumericProperty, ReferenceListProperty, ObjectProperty
-from kivy.vector import Vector
+from kivy.uix.boxlayout import BoxLayout
+from kivy.properties import StringProperty, NumericProperty, ListProperty
 from kivy.clock import Clock
-from kivy.core.window import Window
-    
-class PongBall(Widget):
-    velocity_x = NumericProperty(0)
-    velocity_y = NumericProperty(0)
-    velocity = ReferenceListProperty(velocity_x, velocity_y)
-    
-    def move(self):
-        self.pos = Vector(*self.velocity) + self.pos
+from kivy.core.audio import SoundLoader
 
-    def bounce_paddle(self, paddle):
-        if self.collide_widget(paddle):
-            offset = (self.center_y - paddle.center_y) / (paddle.height / 2)
-            bounced = Vector(-1 * self.velocity_x, self.velocity_y + offset * 5)
-            self.velocity = bounced 
-
-class PongPaddle(Widget):
-    score = NumericProperty(0)
-    
-    def bounce_ball(self, ball):
-        if self.collide_widget(ball):
-            ball.bounce_paddle(self)
-
-class PongGame(Widget):
-    ball = ObjectProperty(None)
-    player1 = ObjectProperty(None)
-    player2 = ObjectProperty(None)
-
-    keys_pressed = set()
+class IAController(BoxLayout):
+    status = StringProperty("Online")
+    threat_level = NumericProperty(20)
+    log_entries = ListProperty([])
+    graph_data = ListProperty([])
+    sound = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        Window.bind(on_key_down=self._on_key_down)
-        Window.bind(on_key_up=self._on_key_up)
+        self.load_state()
+        self.update_graph_data()
+        Clock.schedule_interval(self.update_graph_data, 5)
 
-    def _on_key_down(self, window, key, scancode, codepoint, modifiers):
-        self.keys_pressed.add(key)
+    def log(self, message):
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        entry = f"[{timestamp}] {message}"
+        self.log_entries.append(entry)
+        self.ids.log_label.text = "\n".join(self.log_entries[-50:])
 
-    def _on_key_up(self, window, key, scancode):
-        self.keys_pressed.discard(key)
+    def update_graph_data(self, *args):
+        self.graph_data.append(self.threat_level)
+        if len(self.graph_data) > 20:
+            self.graph_data.pop(0)
+        self.ids.threat_graph.update_plot(self.graph_data)
 
-    def serve_ball(self, vel=(4, 0)):
-        self.ball.center = self.center
-        self.ball.velocity = Vector(*vel)  # Começa reta, sem desvio
+    def send_command(self, command):
+        self.log(f"Comando recebido: {command}")
 
-    def update(self, dt):
-        self.ball.move()
+        def process():
+            if command == "injetar_virus":
+                self.status = "Sob ataque!"
+                self.threat_level += 20
+                self.log("IA: Vírus detectado e isolado.")
+            elif command == "desligar_sistemas":
+                self.status = "Desligando..."
+                self.threat_level += 10
+                self.log("IA: Sistemas auxiliares offline.")
+            elif command == "acessar_dados":
+                self.status = "Acessando dados..."
+                self.threat_level += 5
+                self.log("IA: Dados acessados com sucesso.")
+            else:
+                self.status = "Comando desconhecido"
+                self.log("IA: Comando não reconhecido.")
+            
+            if self.threat_level >= 80:
+                self.trigger_alert()
 
-        # Movimento do player1 (W e S)
-        if 119 in self.keys_pressed:  # W
-            self.player1.y = min(self.height - self.player1.height, self.player1.y + 10)
-        if 115 in self.keys_pressed:  # S
-            self.player1.y = max(0, self.player1.y - 10)
+            Clock.schedule_once(lambda dt: self.save_state())
 
-        # Movimento do player2 (setas ↑ e ↓)
-        if 273 in self.keys_pressed:  # UP
-            self.player2.y = min(self.height - self.player2.height, self.player2.y + 10)
-        if 274 in self.keys_pressed:  # DOWN
-            self.player2.y = max(0, self.player2.y - 10)
+        threading.Thread(target=process).start()
 
-        # Rebote nas bordas superior e inferior
-        if self.ball.y < 0:
-            self.ball.y = 0
-            self.ball.velocity_y *= -1
-        elif self.ball.top > self.height:
-            self.ball.top = self.height
-            self.ball.velocity_y *= -1
+    def trigger_alert(self):
+        self.log("ALERTA: Nível de ameaça crítico!")
+        if not self.sound:
+            self.sound = SoundLoader.load("assets/sounds/alert.wav")
+        if self.sound:
+            self.sound.play()
 
-        self.player1.bounce_ball(self.ball)
-        self.player2.bounce_ball(self.ball)
+    def save_state(self):
+        state = {
+            "status": self.status,
+            "threat_level": self.threat_level
+        }
+        with open("data.json", "w") as f:
+            json.dump(state, f)
 
-        # Pontuação
-        if self.ball.right < 0:
-            self.player2.score += 1
-            self.serve_ball(vel=(4, 0))
-        elif self.ball.x > self.width:
-            self.player1.score += 1
-            self.serve_ball(vel=(-4, 0))
+    def load_state(self):
+        try:
+            with open("data.json", "r") as f:
+                state = json.load(f)
+                self.status = state.get("status", "Online")
+                self.threat_level = state.get("threat_level", 20)
+        except FileNotFoundError:
+            self.status = "Online"
+            self.threat_level = 20
 
-    def on_touch_move(self, touch):
-        if touch.x < self.width / 3:
-            self.player1.center_y = touch.y
-        if touch.x > self.width - self.width / 3:
-            self.player2.center_y = touch.y
-
-class PongApp(App):
+class IAApp(App):
     def build(self):
-        game = PongGame()
-        game.serve_ball()
-        Clock.schedule_interval(game.update, 1.0 / 60.0)
-        return game
+        return IAController()
 
-if __name__ == '__main__':
-    PongApp().run()
+if __name__ == "__main__":
+    IAApp().run()

@@ -1,0 +1,50 @@
+
+<IAController>:
+    orientation: 'vertical'
+    padding: 10
+    spacing: 10
+
+    Label:
+        text: "Status da IA: " + root.status
+        font_size: '20sp'
+        size_hint_y: None
+        height: self.texture_size[1]
+
+    ProgressBar:
+        id: threat_bar
+        max: 100
+        value: root.threat_level
+        height: '20dp'
+        on_value:
+            if self.value >= 80: self.color = (1, 0, 0, 1)
+
+    Button:
+        text: "Injetar Vírus"
+        on_release: root.send_command("injetar_virus")
+
+    Button:
+        text: "Desligar Sistemas"
+        on_release: root.send_command("desligar_sistemas")
+
+    Button:
+        text: "Acessar Dados"
+        on_release: root.send_command("acessar_dados")
+
+    BoxLayout:
+        orientation: 'horizontal'
+        size_hint_y: 0.3
+
+        ScrollView:
+            do_scroll_x: False
+
+            Label:
+                id: log_label
+                text: ""
+                size_hint_y: None
+                height: self.texture_size[1]
+                text_size: self.width, None
+                markup: True
+
+    ThreatGraph:
+        id: threat_graph
+        size_hint_y: 0.3
