@@ -1,68 +1,100 @@
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.label import Label
+from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
+from kivy.uix.label import Label
 
 
-class BoasVindasApp(App):
-    def build(self):
-        # Layout principal em coluna
-        layout = BoxLayout(orientation='vertical', padding=20, spacing=15)
+class ListaTarefas(BoxLayout):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = "vertical"
+        self.padding = 20
+        self.spacing = 15
 
-        # Título fixo no topo
-        self.titulo = Label(
-            text="📱 App de Boas-Vindas",
-            font_size=28,
-            bold=True,
-            size_hint=(1, 0.2),
-            halign="center",
-            valign="middle"
-        )
-        self.titulo.bind(size=self.titulo.setter("text_size"))  # Centralizar
-        layout.add_widget(self.titulo)
-
-        # Campo de entrada (nome do usuário)
-        self.entrada = TextInput(
-            hint_text="Digite seu nome aqui...",
-            multiline=False,
-            size_hint=(1, 0.2),
-            font_size=20
-        )
-        layout.add_widget(self.entrada)
-
-        # Botão Enviar
-        self.botao = Button(
-            text="Enviar",
-            size_hint=(1, 0.2),
-            background_color=(0.2, 0.6, 1, 1),  # Azul
-            color=(1, 1, 1, 1),  # Texto branco
-            font_size=20,
+        # Título
+        self.add_widget(Label(
+            text="📝 Minha Lista de Tarefas",
+            font_size="24sp",
+            size_hint_y=None,
+            height=50,
             bold=True
-        )
-        self.botao.bind(on_press=self.mostrar_mensagem)
-        layout.add_widget(self.botao)
+        ))
 
-        # Label para exibir a mensagem
+        # Entrada de texto
+        self.entrada = TextInput(
+            hint_text="Digite uma tarefa...",
+            multiline=False,
+            size_hint_y=None,
+            height=40
+        )
+        self.add_widget(self.entrada)
+
+        # Botão Adicionar
+        btn_add = Button(
+            text="Adicionar",
+            size_hint_y=None,
+            height=40,
+            background_color=(0.2, 0.7, 0.2, 1)
+        )
+        btn_add.bind(on_release=lambda x: self.adicionar_tarefa())
+        self.add_widget(btn_add)
+
+        # Botão Limpar lista
+        btn_clear = Button(
+            text="Limpar lista",
+            size_hint_y=None,
+            height=40,
+            background_color=(0.8, 0.2, 0.2, 1)
+        )
+        btn_clear.bind(on_release=lambda x: self.limpar_lista())
+        self.add_widget(btn_clear)
+
+        # Mensagem de erro/aviso
         self.mensagem = Label(
             text="",
-            font_size=22,
-            size_hint=(1, 0.4),
-            halign="center",
-            valign="middle"
+            color=(1, 0, 0, 1),
+            size_hint_y=None,
+            height=30
         )
-        self.mensagem.bind(size=self.mensagem.setter("text_size"))  # Centralizar
-        layout.add_widget(self.mensagem)
+        self.add_widget(self.mensagem)
 
-        return layout
+        # Área de tarefas (com ScrollView)
+        self.scroll = ScrollView()
+        self.lista = BoxLayout(
+            orientation="vertical",
+            size_hint_y=None,
+            spacing=5
+        )
+        self.lista.bind(minimum_height=self.lista.setter("height"))
+        self.scroll.add_widget(self.lista)
+        self.add_widget(self.scroll)
 
-    def mostrar_mensagem(self, instance):
-        nome = self.entrada.text.strip()
-        if nome:
-            self.mensagem.text = f"🎉 Bem-vindo(a), {nome}!"
+    def adicionar_tarefa(self):
+        texto = self.entrada.text.strip()
+
+        if texto:
+            nova_tarefa = Label(
+                text=f"• {texto}",
+                size_hint_y=None,
+                height=30
+            )
+            self.lista.add_widget(nova_tarefa)
+            self.entrada.text = ""
+            self.mensagem.text = ""
         else:
-            self.mensagem.text = "⚠️ Por favor, digite seu nome."
+            self.mensagem.text = "⚠ Insira uma tarefa válida"
+
+    def limpar_lista(self):
+        self.lista.clear_widgets()
+        self.mensagem.text = "Lista limpa!"
 
 
-if __name__ == "__main__":
-    BoasVindasApp().run()
+class TarefasApp(App):
+    def build(self):
+        return ListaTarefas()
+
+
+if __name__ == '__main__':
+    TarefasApp().run()
