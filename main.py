@@ -1,100 +1,110 @@
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.scrollview import ScrollView
+from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
-from kivy.uix.label import Label
+from kivy.uix.widget import Widget
+from kivy.graphics import Rectangle, Color
 
-
-class ListaTarefas(BoxLayout):
+class MainWidget(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = "vertical"
-        self.padding = 20
-        self.spacing = 15
+        self.padding = 25
+        self.spacing = 20
+
+        # Fundo colorido
+        with self.canvas.before:
+            Color(0.05, 0.05, 0.1, 1)  # azul escuro quase preto
+            self.bg = Rectangle(size=self.size, pos=self.pos)
+        self.bind(size=self._update_bg, pos=self._update_bg)
 
         # Título
-        self.add_widget(Label(
-            text="📝 Minha Lista de Tarefas",
-            font_size="24sp",
-            size_hint_y=None,
-            height=50,
+        self.label_titulo = Label(
+            text="🔮 Verificador de Idade 🔮",
+            font_size=32,
+            color=(0.2, 0.8, 1, 1),  # azul neon
             bold=True
-        ))
+        )
+        self.add_widget(self.label_titulo)
 
-        # Entrada de texto
-        self.entrada = TextInput(
-            hint_text="Digite uma tarefa...",
+        # Campo nome
+        self.nome_input = TextInput(
+            hint_text="Digite seu nome",
             multiline=False,
+            font_size=20,
+            background_color=(0.15, 0.15, 0.25, 1),
+            foreground_color=(0.9, 0.9, 1, 1),
+            cursor_color=(0.2, 0.8, 1, 1),
             size_hint_y=None,
-            height=40
+            height=50
         )
-        self.add_widget(self.entrada)
+        self.add_widget(self.nome_input)
 
-        # Botão Adicionar
-        btn_add = Button(
-            text="Adicionar",
+        # Campo idade
+        self.idade_input = TextInput(
+            hint_text="Digite sua idade",
+            multiline=False,
+            input_filter="int",
+            font_size=20,
+            background_color=(0.15, 0.15, 0.25, 1),
+            foreground_color=(0.9, 0.9, 1, 1),
+            cursor_color=(0.2, 0.8, 1, 1),
             size_hint_y=None,
-            height=40,
-            background_color=(0.2, 0.7, 0.2, 1)
+            height=50
         )
-        btn_add.bind(on_release=lambda x: self.adicionar_tarefa())
-        self.add_widget(btn_add)
+        self.add_widget(self.idade_input)
 
-        # Botão Limpar lista
-        btn_clear = Button(
-            text="Limpar lista",
+        # Botão enviar
+        self.botao = Button(
+            text="🚀 Enviar",
+            font_size=24,
             size_hint_y=None,
-            height=40,
-            background_color=(0.8, 0.2, 0.2, 1)
+            height=65,
+            background_color=(0, 1, 0.5, 1)  # verde neon
         )
-        btn_clear.bind(on_release=lambda x: self.limpar_lista())
-        self.add_widget(btn_clear)
+        self.botao.bind(on_release=self.verificar_idade)
+        self.add_widget(self.botao)
 
-        # Mensagem de erro/aviso
-        self.mensagem = Label(
+        # Label resposta
+        self.label_resposta = Label(
             text="",
-            color=(1, 0, 0, 1),
-            size_hint_y=None,
-            height=30
+            font_size=22,
+            color=(1, 0.6, 0.2, 1),  # laranja neon
+            halign="center",
+            valign="middle",
+            text_size=(self.width, None)
         )
-        self.add_widget(self.mensagem)
+        self.add_widget(self.label_resposta)
 
-        # Área de tarefas (com ScrollView)
-        self.scroll = ScrollView()
-        self.lista = BoxLayout(
-            orientation="vertical",
-            size_hint_y=None,
-            spacing=5
-        )
-        self.lista.bind(minimum_height=self.lista.setter("height"))
-        self.scroll.add_widget(self.lista)
-        self.add_widget(self.scroll)
+    def _update_bg(self, *args):
+        self.bg.size = self.size
+        self.bg.pos = self.pos
 
-    def adicionar_tarefa(self):
-        texto = self.entrada.text.strip()
+    def verificar_idade(self, instance):
+        nome = self.nome_input.text.strip()
+        idade_texto = self.idade_input.text.strip()
 
-        if texto:
-            nova_tarefa = Label(
-                text=f"• {texto}",
-                size_hint_y=None,
-                height=30
-            )
-            self.lista.add_widget(nova_tarefa)
-            self.entrada.text = ""
-            self.mensagem.text = ""
+        if not nome or not idade_texto.isdigit():
+            self.label_resposta.text = "⚠️ Por favor, preencha os campos corretamente."
+            self.label_resposta.color = (1, 0.2, 0.2, 1)  # vermelho neon
+            return
+
+        idade = int(idade_texto)
+
+        if idade < 18:
+            self.label_resposta.text = f"👶 Olá, {nome}! Você é menor de idade."
+            self.label_resposta.color = (0.8, 0.5, 1, 1)  # roxo neon
+        elif idade >= 60:
+            self.label_resposta.text = f"🧓 Olá, {nome}! Você é idoso e merece muito respeito ❤️."
+            self.label_resposta.color = (1, 0.8, 0.2, 1)  # dourado neon
         else:
-            self.mensagem.text = "⚠ Insira uma tarefa válida"
+            self.label_resposta.text = f"🧑 Olá, {nome}! Você é maior de idade."
+            self.label_resposta.color = (0.2, 1, 0.6, 1)  # verde neon
 
-    def limpar_lista(self):
-        self.lista.clear_widgets()
-        self.mensagem.text = "Lista limpa!"
-
-
-class TarefasApp(App):
+class IdadeApp(App):
     def build(self):
-        return ListaTarefas()
+        return MainWidget()
 
-
-if __name__ == '__main__':
-    TarefasApp().run()
+if __name__ == "__main__":
+    IdadeApp().run()
