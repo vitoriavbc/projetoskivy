@@ -1,114 +1,96 @@
-import random
 from kivy.app import App
+from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
-from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
+from kivy.uix.textinput import TextInput
 from kivy.uix.spinner import Spinner
+import random
 
 
-class FilmeGeneroApp(App):
-    def build(self):
-        # Layout principal
-        self.layout = BoxLayout(orientation='vertical', padding=20, spacing=15)
+# --- Tela 1: Boas-Vindas ---
+class WelcomeScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-        # Campo de entrada para o nome
-        self.nome_input = TextInput(
-            hint_text="Digite seu nome",
-            multiline=False,
-            size_hint=(1, 0.2)
-        )
-        self.layout.add_widget(self.nome_input)
+        layout = BoxLayout(orientation="vertical", spacing=10, padding=20)
 
-        # Spinner para escolher o gênero
+        self.label = Label(text="Digite seu nome:", font_size=20)
+        layout.add_widget(self.label)
+
+        self.name_input = TextInput(hint_text="Seu nome aqui", multiline=False, size_hint=(1, 0.2))
+        layout.add_widget(self.name_input)
+
+        self.continue_button = Button(text="Continuar", size_hint=(1, 0.3), background_color=(0.2, 0.6, 1, 1))
+        self.continue_button.bind(on_press=self.go_to_movies)
+        layout.add_widget(self.continue_button)
+
+        self.add_widget(layout)
+
+    def go_to_movies(self, instance):
+        nome = self.name_input.text.strip()
+        if nome:
+            self.manager.get_screen("movies").set_user_name(nome)
+            self.manager.current = "movies"
+
+
+# --- Tela 2: Sugestão de Filmes ---
+class MovieScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        layout = BoxLayout(orientation="vertical", spacing=10, padding=20)
+
+        # Label de boas-vindas
+        self.welcome_label = Label(text="Bem-vindo!", font_size=22)
+        layout.add_widget(self.welcome_label)
+
+        # Spinner para escolher gênero
         self.spinner = Spinner(
-            text="Escolha o gênero",
+            text="Selecione um gênero",
             values=("Ação", "Comédia", "Animação"),
-            size_hint=(1, 0.2),
-            background_color=(0.3, 0.6, 0.9, 1)
+            size_hint=(1, 0.3),
         )
-        self.layout.add_widget(self.spinner)
+        layout.add_widget(self.spinner)
 
         # Botão para sugerir filme
-        self.botao_sugerir = Button(
-            text="🎬 Sugerir Filme",
-            size_hint=(1, 0.2),
-            background_color=(0.2, 0.8, 0.4, 1)
-        )
-        self.botao_sugerir.bind(on_press=self.sugerir_filme)
-        self.layout.add_widget(self.botao_sugerir)
+        self.suggest_button = Button(text="Sugerir Filme", size_hint=(1, 0.3), background_color=(0.4, 0.9, 0.4, 1))
+        self.suggest_button.bind(on_press=self.suggest_movie)
+        layout.add_widget(self.suggest_button)
 
-        # Botão para limpar
-        self.botao_limpar = Button(
-            text="🧹 Limpar",
-            size_hint=(1, 0.2),
-            background_color=(0.9, 0.3, 0.3, 1)
-        )
-        self.botao_limpar.bind(on_press=self.limpar)
-        self.layout.add_widget(self.botao_limpar)
+        # Label para exibir sugestão
+        self.movie_label = Label(text="", font_size=20, color=(1, 0, 0, 1))
+        layout.add_widget(self.movie_label)
 
-        # Label para mostrar a mensagem final
-        self.mensagem_label = Label(
-            text="",
-            font_size=18,
-            halign="center",
-            valign="middle"
-        )
-        self.layout.add_widget(self.mensagem_label)
+        self.add_widget(layout)
 
-        return self.layout
+        # Dicionário de filmes
+        self.movies = {
+            "Ação": ["Mad Max: Estrada da Fúria", "John Wick", "Gladiador", "Velozes e Furiosos"],
+            "Comédia": ["As Branquelas", "Se Beber, Não Case", "Gente Grande", "Minha Mãe é uma Peça"],
+            "Animação": ["Shrek", "Toy Story", "Procurando Nemo", "Divertida Mente"],
+        }
 
-    def sugerir_filme(self, instance):
-        nome = self.nome_input.text.strip()
-        genero = self.spinner.text
+    def set_user_name(self, name):
+        self.welcome_label.text = f"Bem-vindo(a), {name}! Escolha um gênero:"
 
-        # Listas de filmes com ano
-        filmes_acao = [
-            ("Matrix", 1999),
-            ("John Wick", 2014),
-            ("Mad Max: Estrada da Fúria", 2015),
-            ("Gladiador", 2000),
-        ]
-        filmes_comedia = [
-            ("As Branquelas", 2004),
-            ("Se Beber, Não Case", 2009),
-            ("Ace Ventura", 1994),
-            ("Click", 2006),
-        ]
-        filmes_animacao = [
-            ("Toy Story", 1995),
-            ("Shrek", 2001),
-            ("O Rei Leão", 1994),
-            ("Procurando Nemo", 2003),
-        ]
-
-        if not nome:
-            self.mensagem_label.text = "⚠️ Por favor, digite seu nome."
-            return
-
-        if genero == "Escolha o gênero":
-            self.mensagem_label.text = "⚠️ Por favor, selecione um gênero."
-            return
-
-        # Escolhe a lista de acordo com o gênero
-        if genero == "Ação":
-            filme, ano = random.choice(filmes_acao)
-        elif genero == "Comédia":
-            filme, ano = random.choice(filmes_comedia)
-        elif genero == "Animação":
-            filme, ano = random.choice(filmes_animacao)
+    def suggest_movie(self, instance):
+        genre = self.spinner.text
+        if genre in self.movies:
+            movie = random.choice(self.movies[genre])
+            self.movie_label.text = f"Sugestão: {movie}"
         else:
-            self.mensagem_label.text = "⚠️ Gênero inválido."
-            return
+            self.movie_label.text = "Por favor, escolha um gênero válido!"
 
-        self.mensagem_label.text = f"Olá, {nome}!\nSua sugestão de filme de {genero} é: {filme} ({ano})."
 
-    def limpar(self, instance):
-        """Reseta os campos para o estado inicial"""
-        self.nome_input.text = ""
-        self.spinner.text = "Escolha o gênero"
-        self.mensagem_label.text = ""
+# --- Gerenciador de Telas ---
+class MovieApp(App):
+    def build(self):
+        sm = ScreenManager()
+        sm.add_widget(WelcomeScreen(name="welcome"))
+        sm.add_widget(MovieScreen(name="movies"))
+        return sm
 
 
 if __name__ == "__main__":
-    FilmeGeneroApp().run()
+    MovieApp().run()
